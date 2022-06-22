@@ -29,6 +29,6 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'climata==0.5.0',
     'gsw==3.4.0',
     'pyshp==2.1.3',
-    'noaa-coops=0.1.9'
+    'noaa-coops==0.1.9'
   ],
 )
