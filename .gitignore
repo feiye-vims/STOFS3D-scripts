@@ -2,5 +2,5 @@
 .vscode/
 Notebook/
 instructions.txt
+STOFS3D_scripts.egg-info/
 __pycache__/
-.egg-info/

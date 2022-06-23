@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
   long_description = fh.read()
 
   setuptools.setup(
-  name='STOFS3D-scripts',
+  name='STOFS3D_scripts',
   version='0.0.1',
   author='Fei Ye',
   author_email='feiye@vims.edu',
@@ -17,9 +17,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
   },
   license='Apache License 2.0',
   packages=[
-    'STOFS3D-scripts',
-    'STOFS3D-scripts.Pre-processing',
-    'STOFS3D-scripts.Post-processing',
+    'STOFS3D_scripts',
+    'STOFS3D_scripts.Pre-processing',
+    'STOFS3D_scripts.Post-processing',
   ],
   package_data={'STOFS3D-scripts': ['Datafiles/*']},
   install_requires=[
