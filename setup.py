@@ -18,10 +18,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
   license='Apache License 2.0',
   packages=[
     'STOFS3D_scripts',
-    'STOFS3D_scripts.Pre-processing',
-    'STOFS3D_scripts.Post-processing',
+    'STOFS3D_scripts.Pre_processing',
+    'STOFS3D_scripts.Post_processing',
   ],
-  package_data={'STOFS3D-scripts': ['Datafiles/*']},
+  package_data={'STOFS3D_scripts': ['Datafiles/*']},
   install_requires=[
     'numpy',
     'pandas',
