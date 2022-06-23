@@ -4,6 +4,8 @@ load bathymetry for NWM model grid
 '''
 from pylib import *
 import time
+import errno
+import os
 
 #-----------------------------------------------------------------------------
 #Input
@@ -17,7 +19,7 @@ regions=['./regions/'+i for i in ("min_5m_ll_noPR.reg","SabinePass.reg","BergenP
          "Rappahannock_river.reg","Susquehanna_river.reg","York_river.reg",
          "Androscoggin_Kennebec_rivers.reg","Merrimack_river.reg","Patuxent_river.reg",
          "Penobscot_river.reg","Saco_river.reg","StCroix_river.reg","GoME_NE_min_2m.reg","Oyster_landing.reg",
-         "BirdsFoodDelta_10m.reg")] #regions for modifying depth
+         )] #regions for modifying depth
 rvalues=(5,7,5,15,
          2,16,14,5,
          6,10,10,
@@ -70,8 +72,20 @@ if myrank==0: t0=time.time()
 #-----------------------------------------------------------------------------
 #do MPI work on each core
 #-----------------------------------------------------------------------------
+#check existence of region files
+if myrank==0:
+    for region in regions:
+        if not os.path.exists(region):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), region)
+
 #get all DEM files and distribute jobs
 fnames0=array([i for i in os.listdir(sdir) if i.endswith('.npz')])
+#check existence of DEM tiles
+if myrank==0:
+  for header in headers:
+      fnames_sub=array([i for i in fnames0 if i.startswith(header)])
+      if len(fnames_sub)==0:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), f"{header}*")
 
 #filter with headers, and sort by id numbers
 fnames_sort=[]
