@@ -3,3 +3,4 @@
 Notebook/
 instructions.txt
 __pycache__/
+.egg-info/
