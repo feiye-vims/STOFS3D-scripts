@@ -1,4 +1,4 @@
-*gen_sourcesink.py italicized*
+*gen_sourcesink.py*
 This script is used to generate source/sink th files for hindcast.
 ##There are three datasets:
 - AWS 
@@ -10,6 +10,6 @@ This script is used to generate source/sink th files for hindcast.
   - has missing files
 - VIMS 
   - needs pre-download
-  - use *link.py italicized* to link files to the cache/
+  - use *link.py* to link files to the cache/
 
 
