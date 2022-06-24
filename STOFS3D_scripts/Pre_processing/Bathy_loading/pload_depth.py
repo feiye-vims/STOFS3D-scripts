@@ -51,7 +51,7 @@ qname='flex'                        #partition name
 account='TG-OCE140024'              #stampede2: NOAA_CSDL_NWI,TG-OCE140024; mistral: gg0028
 
 jname='load_dem' #job name
-ibatch=0; scrout='screen.out'; bdir=os.path.abspath(os.path.curdir)
+ibatch=1; scrout='screen.out'; bdir=os.path.abspath(os.path.curdir)
 #-----------------------------------------------------------------------------
 #on front node: 1). submit jobs first (qsub), 2) running parallel jobs (mpirun)
 #-----------------------------------------------------------------------------
