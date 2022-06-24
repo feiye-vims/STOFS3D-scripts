@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import STOFS3D-scripts
+import STOFS3D_scripts
 from schism_py_pre_post.Shared_modules.hotstart_proc import Hotstart
 from schism_py_pre_post.Download.download_usgs_with_api import get_usgs_obs_for_stofs3d
 from schism_py_pre_post.Download.download_cbp_with_api import get_cbp_obs_for_stofs3d
@@ -22,7 +22,7 @@ my_hot_file = f'{wdir}/hotstart.nc'
 # end input section
 
 # copy datafiles
-mydir = os.path.dirname(STOFS3D-scripts.__file__)
+mydir = os.path.dirname(STOFS3D_scripts.__file__)
 for shp in city_shapefile_names:
     shp_basename = Path(shp).stem
     os.system(f'cp {mydir}/Datafiles/Tweak_hotstart/{shp_basename}.* {wdir}')
