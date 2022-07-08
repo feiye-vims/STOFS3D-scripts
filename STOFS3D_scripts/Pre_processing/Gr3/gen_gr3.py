@@ -1,20 +1,14 @@
-from pyschism.mesh.hgrid import Hgrid
-from pyschism.mesh.gridgr3 import Albedo, Diffmax, Diffmin, Watertype, Windrot
+from pyschism.mesh.hgrid import Gr3
 
 if __name__ == '__main__':
-    hgrid = Hgrid.open('./hgrid.gr3', crs='epsg:4326')
+    hgrid = Gr3.open('./hgrid.gr3', crs='epsg:4326')
+    grd = hgrid.copy()
 
-    albedo = Albedo.constant(hgrid, 0.15)
-    albedo.write('albedo.gr3', overwrite=True)
+    gr3_names = ['albedo', 'diffmax', 'diffmin', 'watertype', 'windrot_geo2proj']
+    values = [0.1, 1.0, 1e-6, 1.0, 0.0]
 
-    diffmax = Diffmax.constant(hgrid, 1.0)
-    diffmax.write('diffmax.gr3', overwrite=True)
+    for name, value in zip(gr3_names, values):
+       grd.description = name
+       grd.nodes.values[:] = value
+       grd.write(f'{name}.gr3', overwrite=True)
 
-    diffmin = Diffmax.constant(hgrid, 1e-6)
-    diffmin.write('diffmin.gr3', overwrite=True)
-
-    watertype = Watertype.constant(hgrid, 1.0) 
-    watertype.write('watertype.gr3', overwrite=True)
-
-    windrot=Windrot.constant(hgrid, 0.0)
-    windrot.write('windrot_geo2proj.gr3', overwrite=True)
