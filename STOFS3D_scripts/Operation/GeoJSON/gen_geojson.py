@@ -1,59 +1,67 @@
-import glob
-import shutil
 import os
-import subprocess
+import argparse
 import copy
+from time import time
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from shapely.geometry import Polygon
+import netCDF4 as nc
+from netCDF4 import Dataset
+from shapely.geometry import Polygon, MultiPolygon
 from shapely.validation import make_valid
-#import fiona
 from geopandas import GeoDataFrame
 
-from pyschism.mesh.hgrid import Hgrid
+from STOFS3D_scripts.Utility import utils
 
-def contour_to_gdf(hgrid, maxelev):
-    h = -hgrid.values
-    elev = Hgrid.open(maxelev, crs='EPSG:4326')
-    mzeta = -elev.values
-    D = copy.deepcopy(mzeta)
+def get_disturbance(elevation, depth, fill_value):
 
-    #Mask dry nodes
-    NP = len(mzeta)
-    idxs = np.where(h < 0)
-    D[idxs] = np.maximum(0, mzeta[idxs]+h[idxs])
+    #set mask on dry nodes
+    idxs_dry = np.where(elevation + depth <= 1.e-6)
+    elevation[idxs] = fill_value
 
-    idry = np.zeros(NP)
-    idxs = np.where(mzeta+h <= 1e-6)
-    idry[idxs] = 1
+    #disturbance
+    disturbance = copy.deepcopy(elevation)
+    idxs_land_node = depth < 0
+    disturbance[idxs_land_node] = np.maximum(0, elevation[idxs_land_node] + depth[idxs_land_node])
 
-    MinVal = np.min(D)
-    MaxVal = np.max(D)
-    NumLevels = 21
+    #set mask on dry nodes and nodes with small max disturbance (<0.3 m) on land
+    idxs_small = disturbance < 0.3
+    idxs_mask_maxdist = idxs_small * idxs_land_node
+    disturbance[idxs_mask_maxdist] = fill_value
+
+    return disturbance
+
+def contour_to_gdf(disturbance, triangulation):
+
+    MinVal = np.min(disturbance)
+    MaxVal = np.max(disturbance)
 
     if True:
         MinVal = max(MinVal, 0.5)
         MaxVal = min(MaxVal, 3.0)
-        NumLevels = 12
+
     print(f'MinVal is {MinVal}')
     print(f'MaxVal is {MaxVal}')
 
     step = 0.2  # m 
     levels = [0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9, 2.1, 2.3, 2.5, 2.7, 2.9]
-    print(f'levels is {levels}')
+    MinMax = []
+    for i in range(12): 
+        MinMax.append((levels[i], levels[i+1]))
+    MinMax.append((2.9, 3.1))
+    print(f'MinMax is {len(MinMax)}')
+
     fig = plt.figure()
     ax = fig.add_subplot()
-    tri = elev.triangulation
-    mask = np.any(np.where(idry[tri.triangles], True, False), axis=1)
-    tri.set_mask(mask)
 
     my_cmap = plt.cm.jet
-    contour = ax.tricontourf(tri, D, vmin=MinVal, vmax=MaxVal,levels=levels, cmap=my_cmap, extend='max')
+    contour = ax.tricontourf(triangulation, disturbance, vmin=MinVal, vmax=MaxVal,
+        levels=levels, cmap=my_cmap, extend='max')
 
     #Transform a `matplotlib.contour.QuadContourSet` to a GeoDataFrame
     polygons, colors = [], []
+    data = []
     for i, polygon in enumerate(contour.collections):
         mpoly = []
         for path in polygon.get_paths():
@@ -76,28 +84,16 @@ def contour_to_gdf(hgrid, maxelev):
             mpoly = MultiPolygon(mpoly)
             polygons.append(mpoly)
             colors.append(polygon.get_facecolor().tolist()[0])
+            data.append({'id': i+1, 'minVal': MinMax[i][0], 'maxVal': MinMax[i][1], 
+                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly})
         elif len(mpoly) == 1:
             polygons.append(mpoly[0])
             colors.append(polygon.get_facecolor().tolist()[0])
+            data.append({'id': i+1, 'minVal': MinMax[i][0], 'maxVal': MinMax[i][1], 
+                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly[0]})
     plt.close('all')
-    #return GeoDataFrame(geometry=polygons, data={'RGBA': colors}, crs={'init': 'epsg:4326'})
-    return GeoDataFrame(geometry=polygons, crs={'init': 'epsg:4326'})
 
-if __name__ == "__main__":
-#   path = f'/home1/06923/hyu05/work/oper_3D/fcst'
-#   fcst = glob.glob(f'{path}/2021*')
-#   fcst.sort()
-#   fname = f'{fcst[-1]}/maxelev.gr3.gz'
-#   work_dir = './'
-#   shutil.copy(fname, work_dir)
-#   cmd='gunzip -f maxelev.gr3.gz'
-#   subprocess.check_call(cmd, shell=True)
-
-    fgrd = Hgrid.open('./hgrid.gr3', crs='epsg:4326')
-    felev = 'maxelev.gr3'
-
-    gdf = contour_to_gdf(fgrd, felev)
-
+    gdf = GeoDataFrame(data)
 
     #Get color in Hex
     colors_elev = []
@@ -107,6 +103,65 @@ if __name__ == "__main__":
         color = my_cmap(i/len(gdf))
         colors_elev.append(mpl.colors.to_hex(color))
 
-    gdf['RGBA'] = colors_elev
-    gdf.to_file('./disturbance.json', driver="GeoJSON")
+    gdf['rgba'] = colors_elev
 
+    #set crs
+    gdf = gdf.set_crs('epsg: 4326')
+
+    return  gdf
+
+if __name__ == "__main__":
+
+    my_fillvalue = -99999.0
+
+    #input arguments
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--input_filename', help='file name in SCHISM format')
+    args = argparser.parse_args()
+
+    input_filename = args.input_filename
+    input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]    
+
+    #reading netcdf dataset
+    ds = Dataset(input_filename)
+
+    #get coordinates/bathymetry
+    x = ds['SCHISM_hgrid_node_x'][:]
+    y = ds['SCHISM_hgrid_node_y'][:]
+    depth = ds['depth'][:]
+
+    #get elements and split quads into tris
+    elements = ds['SCHISM_hgrid_face_nodes'][:, :]
+    t0 = time()
+    tris = utils.split_quads(elements)
+    print(f'Spliting quads took {time()-t0} seconds')
+
+    #get triangulation for contour plot
+    triangulation = utils.triangulation(x, y, tris)
+
+    #get time
+    times = ds['time'][:]
+    dates = nc.num2date(times, ds['time'].units)
+
+    #get elevation
+    elev = ds['elevation'][:, :]
+    idxs = np.where(elev > 100000)
+    elev[idxs] = my_fillvalue
+
+    #calculate max elevation for this stack
+    maxelev = np.max(elev, axis=0)
+    idxs = np.argmax(elev, axis=0)
+    time_maxelev = times[idxs]
+
+    t0 = time()
+    disturbance = get_disturbance(maxelev, depth, my_fillvalue)
+    print(f'Calculating and masking disturbance took {time()-t0} seconds')
+
+    t0 = time()
+    gdf = contour_to_gdf(disturbance, triangulation)
+    print(f'Extract polygon from contour took {time()-t0} seconds')
+
+    filename_output = f'./stofs3d_atlantic_max_disturbance_{dates[0].strftime("%Y%m%d")}'  \
+        + f't12z_{dates[-1].strftime("%Y%m%d")}t23z.json'
+
+    gdf.to_file(filename_output, driver="GeoJSON")
