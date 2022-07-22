@@ -2,7 +2,8 @@
 Usage: python generate_adcirc.py --input_filename ./outputs/out2d_?.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
 
 For example:
-python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
+(on WCOSS2) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.node_id.txt --output_dir ./extract/
+(on other clusters) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
 will generate
 ./extract/schout_adcirc_1.nc, which is in ADCIRC's format
 
