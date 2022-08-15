@@ -77,10 +77,10 @@ def contour_to_gdf(disturbance, levels, triangulation):
                 exterior, holes = [], []
                 if len(poly) > 0 and len(poly[0]) > 3:
                     # The first of the list is the exterior ring :
-                    exterior = poly[0]
+                    exterior = np.round(poly[0], 5)
                     # Other(s) are hole(s):
                     if len(poly) > 1:
-                        holes = [h for h in poly[1:] if len(h) > 3]
+                        holes = [np.round(h, 5) for h in poly[1:] if len(h) > 3]
                 mpoly.append(make_valid(Polygon(exterior, holes)))
             except:
                 print('Warning: Geometry error when making polygon #{}'.format(i))
