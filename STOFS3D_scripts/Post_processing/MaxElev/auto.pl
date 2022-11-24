@@ -29,7 +29,7 @@ system("ln -sf $rundir/hgrid* .");
 system("ln -sf $rundir/vgrid* .");
 system("cp hgrid* vgrid.in read_output10_allnodes_viz.exe max_elev_$file_suffix.in $rundir/outputs/");
 chdir("$rundir/outputs/");
-# system("./read_output10_allnodes_viz.exe < max_elev_$file_suffix.in");
+system("./read_output10_allnodes_viz.exe < max_elev_$file_suffix.in");
 
 
 chdir($thisdir);
