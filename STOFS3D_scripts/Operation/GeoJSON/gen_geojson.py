@@ -170,9 +170,13 @@ if __name__ == "__main__":
     npool = len(times) if len(times) < mp.cpu_count() else mp.cpu_count()-1
     #print(npool)
 
-    filenames = [f'./stofs3d_atlantic_disturbance_{dates[0].strftime("%Y%m%d")}' \
-        + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
+    #filenames = [f'./stofs3d_atlantic_disturbance_{dates[0].strftime("%Y%m%d")}' \
+    #    + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
     #print(filenames)
+    #filenames = [f'stofs3d.atlantic.disturbance.n{i-1:03d}.{dates[30].strftime("%Y%m%d")}.t12z.gpkg' for i in range(24, 0,-1)]
+    filenames = [f'stofs_3d_atl.t12z.disturbance.n{i-1:03d}.gpkg' for i in range(24, 0,-1)]
+    for i in range(48):
+        filenames.append(f'stofs_3d_atl.t12z.disturbance.f{i+1:03d}.gpkg')
 
     t0 =  time()
 
