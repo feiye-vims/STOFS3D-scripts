@@ -1,0 +1,14 @@
+{
+    "CuDEM": {
+        "name": "CuDEM",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CuDEM/Lonlat/*.tif",
+        "file_list": [],
+        "boxes": []
+    },
+    "CRM": {
+        "name": "CRM",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CRM/Lonlat/*.tif",
+        "file_list": [],
+        "boxes": []
+    }
+}
