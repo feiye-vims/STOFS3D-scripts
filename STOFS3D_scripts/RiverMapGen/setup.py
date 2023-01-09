@@ -24,6 +24,9 @@ with io.open('README.md','r', encoding='utf8') as fh:
   install_requires=[
     'numpy',
     'pandas',
-    'xarray',
+    'gdal',
+    'shapely',
+    'pyshp',
+    'geopandas'
   ],
 )
