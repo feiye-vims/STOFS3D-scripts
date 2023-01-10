@@ -3,7 +3,7 @@ import pickle
 import os
 import numpy as np
 from shapely.geometry import LineString
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import glob
 import numpy as np
 import re
@@ -95,11 +95,11 @@ def redistribute(x, y, length=None, num_points=None, iplot=False):
     x_subsampled = [p.x for p in new_points]
     y_subsampled = [p.y for p in new_points]
 
-    if iplot:
-        plt.plot(x, y, '+')
-        plt.plot(x_subsampled, y_subsampled, 'o')
-        plt.axis('equal')
-        plt.show()
+    # if iplot:
+    #     plt.plot(x, y, '+')
+    #     plt.plot(x_subsampled, y_subsampled, 'o')
+    #     plt.axis('equal')
+    #     plt.show()
 
     return x_subsampled, y_subsampled, new_points
 

@@ -1,16 +1,13 @@
-import numpy as np
-import copy
-from copy import deepcopy
 import os
+from copy import deepcopy
+import numpy as np
+from scipy import interpolate
 import math
 from osgeo import gdal
 from dataclasses import dataclass
 import pathlib
 import pickle
-from scipy import interpolate
-import numpy as np
-from pylib import loadz
-from SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, \
+from RiverMapGen.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, \
     curvature, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat, \
     get_perpendicular_angle
 
@@ -226,7 +223,7 @@ def get_bank(S_list, x, y, thalweg_eta, xt, yt, search_steps=100, search_toleran
     return x_banks, y_banks
 
 def get_dist_increment(line):
-    line_copy = copy.deepcopy(line)
+    line_copy = deepcopy(line)
     line_cplx = np.squeeze(line_copy.view(np.complex128))
     dist = np.absolute(line_cplx[1:] - line_cplx[:-1])
 
@@ -323,7 +320,7 @@ def smooth_bank(line, xs, ys, xs_other_side, ys_other_side, ang_diff_shres=np.pi
                 idx = sharp_turns[insert_turns_idx]
 
                 tmp = np.c_[line, xs, ys, xs_other_side, ys_other_side]
-                tmp_original = copy.deepcopy(tmp)
+                tmp_original = deepcopy(tmp)
                 tmp[idx, :] = (tmp_original[idx, :] + tmp_original[idx+1, :])/2
                 tmp = np.insert(tmp, idx, (tmp_original[idx, :] + tmp_original[idx-1, :])/2, axis=0)
 
@@ -357,15 +354,16 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
 
     return xs, ys
 
-def Tif2XYZ(tif_fname=None, remove_cache=False):
+def Tif2XYZ(tif_fname=None, cache=True):
     cache_name = tif_fname + '.pkl'
-    if remove_cache:
+    if not cache:
         if os.path.exists(cache_name):
             os.remove(cache_name)
 
     if os.path.exists(cache_name):
         with open(cache_name, 'rb') as f:
             S = pickle.load(f)
+        pass
     else:
         ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
         band = ds.GetRasterBand(1)
@@ -461,7 +459,7 @@ def get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min
     yt_left = thalweg[:, 1] + search_length * np.sin(perp + np.pi)
 
     # Diagnostic: save search area as SMS arcs
-    range_arcs += [SMS_ARC(points=np.c_[xt_left, yt_left]), SMS_ARC(points=np.c_[xt_right, yt_right])]
+    range_arcs += [SMS_ARC(points=np.c_[xt_left, yt_left], src_prj='cpp'), SMS_ARC(points=np.c_[xt_right, yt_right], src_prj='cpp')]
 
     # find two banks
     x_banks_left, y_banks_left = \
@@ -632,12 +630,12 @@ def width2narcs(width):
     return int(3 + np.floor(0.5*width**0.25))
 
 def make_river_map(
-    tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
-    thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+    tif_fnames = [],
+    thalweg_shp_fname = '',
+    thalweg_smooth_shp_fname = None,
     selected_thalweg = None,
     cache_folder=None,
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/',
+    output_dir = './',
     output_prefix = '',
     mpi_print_prefix = ''
 ):
@@ -680,6 +678,7 @@ def make_river_map(
     max_nrow_arcs = width2narcs(river_threshold[-1])  # maximum number of arcs to resolve a channel (including bank arcs)
 
     i_thalweg_cache = False
+    i_dem_cache = False
     # ------------------------- end basic inputs ---------------------------
 
     if i_thalweg_cache:
@@ -697,10 +696,8 @@ def make_river_map(
         else:
             nvalid_tile += 1
 
-        if pathlib.Path(tif_fname).suffix == ".npz":
-            S = loadz(tif_fname)
-        elif pathlib.Path(tif_fname).suffix == ".tif" :
-            S = Tif2XYZ(tif_fname=tif_fname)
+        if pathlib.Path(tif_fname).suffix == ".tif" :
+            S = Tif2XYZ(tif_fname=tif_fname, cache=i_dem_cache)
         else:
             raise Exception("Unknown DEM format.")
         print(f'{mpi_print_prefix} [{os.path.basename(tif_fname)}] DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
@@ -786,8 +783,8 @@ def make_river_map(
             valid_thalwegs[i] = False
             continue
 
-        original_banks[2*i] = SMS_ARC(points=np.c_[x_banks_left, y_banks_left])
-        original_banks[2*i+1] = SMS_ARC(points=np.c_[x_banks_right, y_banks_right])
+        original_banks[2*i] = SMS_ARC(points=np.c_[x_banks_left, y_banks_left], src_prj='cpp')
+        original_banks[2*i+1] = SMS_ARC(points=np.c_[x_banks_right, y_banks_right], src_prj='cpp')
 
     # End Dry run: found valid river segments; record approximate channel width
 
@@ -819,8 +816,8 @@ def make_river_map(
 
         # Redistribute thalwegs vertices
         thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth, width, length_width_ratio=length_width_ratio, smooth_option=1)
-        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]])
-        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
+        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]], src_prj='cpp')
+        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
         if len(thalweg[:, 0]) < 2:
             print(f"{mpi_print_prefix} warning: thalweg {i+1} only has one point after redistribution, neglecting ...")
@@ -839,16 +836,16 @@ def make_river_map(
         thalweg, is_corrected= improve_thalwegs(S_list, dl, thalweg, width_moving_avg*0.5, perp, mpi_print_prefix)
         if not is_corrected:
             print(f"{mpi_print_prefix} warning: thalweg {i+1} (head: {thalweg[0]}; tail: {thalweg[-1]}) failed to correct, using original thalweg ...")
-        corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
+        corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
         # Redistribute thalwegs vertices
         thalweg, thalweg_smooth, reso, retained_idx = redistribute_arc(thalweg, thalweg_smooth[retained_idx], width, length_width_ratio=length_width_ratio, smooth_option=1)
-        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]])
-        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
+        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]], src_prj='cpp')
+        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
         # Smooth thalweg
         thalweg, perp = smooth_thalweg(thalweg, ang_diff_shres=np.pi/2.4)
-        final_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
+        final_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]], src_prj='cpp')
 
         # update thalweg info
         elevs = get_elev_from_tiles(thalweg[:, 0],thalweg[:, 1], S_list)
@@ -912,9 +909,9 @@ def make_river_map(
 
         # assemble banks
         for k, line in enumerate([np.c_[x_banks_left, y_banks_left], np.c_[x_banks_right, y_banks_right]]):
-            bank_arcs_raw[i, k] = SMS_ARC(points=np.c_[line[:, 0], line[:, 1]])
+            bank_arcs_raw[i, k] = SMS_ARC(points=np.c_[line[:, 0], line[:, 1]], src_prj='cpp')
             if sum(valid_points) > 0:
-                bank_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]])
+                bank_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]], src_prj='cpp')
 
         if sum(valid_points) > 0:
             for j in [0, -1]:
@@ -934,14 +931,14 @@ def make_river_map(
                     # ----------Save-------
                     # save final bank arcs
                     if k == 0:  # left bank
-                        bank_arcs_final[i, 0] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                        bank_arcs_final[i, 0] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]], src_prj='cpp')
                     elif k == len(x_inner_arcs)-1:  # right bank
-                        bank_arcs_final[i, 1] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                        bank_arcs_final[i, 1] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]], src_prj='cpp')
                     # save inner arcs
-                    inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                    inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]], src_prj='cpp')
                     # save centerline
                     if k == int(len(x_inner_arcs)/2):
-                        centerlines[i] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                        centerlines[i] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]], src_prj='cpp')
                     # save bombed points
                     bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/this_nrow_arcs]]
 
@@ -957,7 +954,7 @@ def make_river_map(
             # assemble cross-channel arcs
             if sum(valid_points) > 0:
                 for j in [0, -1]:
-                    cc_arcs[i, j] = SMS_ARC(points=np.c_[x_inner_arcs[:, valid_points][:, j], y_inner_arcs[:, valid_points][:, j]])
+                    cc_arcs[i, j] = SMS_ARC(points=np.c_[x_inner_arcs[:, valid_points][:, j], y_inner_arcs[:, valid_points][:, j]], src_prj='cpp')
                     pass
 
     # assemble intersection resolution scatters
@@ -1051,12 +1048,3 @@ def make_river_map(
         SMS_MAP(detached_nodes=np.c_[bombed_lon, bomed_lat]).writer(f'{output_dir}/{output_prefix}bombed_nodes.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')
-
-if __name__ == "__main__":
-    make_river_map(
-        tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TMP/GA_dem_merged_ll.tif'],
-        thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/GA_local.shp',
-        output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/GA_local/',
-        cache_folder = '/sciclone/schism10/feiye/Cache/'
-    )
-    pass
