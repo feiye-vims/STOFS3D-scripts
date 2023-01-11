@@ -1045,6 +1045,6 @@ def make_river_map(
         else:
             total_arcs = np.r_[inner_arcs.reshape((-1, 1))]
         SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
-        SMS_MAP(detached_nodes=np.c_[bombed_lon, bomed_lat]).writer(f'{output_dir}/{output_prefix}bombed_nodes.map')
+        SMS_MAP(detached_nodes=np.c_[bombed_lon, bomed_lat]).writer(f'{output_dir}/{output_prefix}total_intersection_joints.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')

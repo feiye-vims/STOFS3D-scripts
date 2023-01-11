@@ -139,7 +139,7 @@ def river_map_mpi_driver(
     # merge outputs from all ranks
     if rank == 0:
         merge_maps(f'{output_dir}/Rank*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
-        merge_maps(f'{output_dir}/*bomb*.map', merged_fname=f'{output_dir}/total_bombs.map')
+        merge_maps(f'{output_dir}/*intersection_joints*.map', merged_fname=f'{output_dir}/total_intersection_joints.map')
         merge_maps(f'{output_dir}/*inner_arcs.map', merged_fname=f'{output_dir}/total_inner_arcs.map')
         merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
         merge_maps(f'{output_dir}/*bank_final*.map', merged_fname=f'{output_dir}/total_banks_final.map')
