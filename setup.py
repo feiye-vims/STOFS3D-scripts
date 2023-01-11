@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
   setuptools.setup(
   name='STOFS3D_scripts',
-  version='0.0.1',
+  version='0.0.2',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for pre/post-processing SCHISM models',
