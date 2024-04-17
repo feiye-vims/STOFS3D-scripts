@@ -6,7 +6,7 @@ import os
 from netCDF4 import Dataset
 
 def make_mask(hg: schism_grid, high_ground_thres=-19.0, additional_mask_file=None):
-    
+
     hg.compute_bnd()
     hg.compute_node_ball()
     # hg.save('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220715_update/hgrid.pkl')
@@ -74,5 +74,5 @@ if __name__ == '__main__':
     hg = schism_grid('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220715_update/hgrid.pkl')
 
     imask = make_mask(hg, high_ground_thres=-19.0, additional_mask_file='./Shapefiles/additional_masks.shp')
-    write_mask_nc(imask, outputfile='/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Mask_lbnd/lbnd_node_mask1.nc')
-    
+    write_mask_nc(imask, outputfile='/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Mask_lbnd/lbnd_node_mask.nc')
+

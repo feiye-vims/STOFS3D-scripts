@@ -1,15 +1,6 @@
 # STOFS3D-scripts
-Pre/Post-processing scripts for STOFS3D (in-group use)
 
-## Installation
-### 
-pip install git+https://github.com/feiye-vims/STOFS3D-scripts.git
+Pre/post-processing scripts for STOFS-3D's operational forecast and shaldow forecast.
 
-Also install schism_py_pre_post and pyschism:
-
-pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
-
-pip install pyschism
-
-
+Originally, this repo was intended for all pre/post-processing scripts of STOFS3D (in-group use), but most of the scripts have been migrated to schism-dev/schism/, so it only keep tracks of operational scripts now.
 

@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
   version='0.0.2',
   author='Fei Ye',
   author_email='feiye@vims.edu',
-  description='Python tools for pre/post-processing SCHISM models',
+  description='Scripts for STOFS3D operation',
   long_description=long_description,
   long_description_content_type="text/markdown",
   url='',
@@ -18,17 +18,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
   license='Apache License 2.0',
   packages=[
     'STOFS3D_scripts',
-    'STOFS3D_scripts.Pre_processing',
-    'STOFS3D_scripts.Post_processing',
+    'STOFS3D_scripts.',
+    'STOFS3D_scripts.Operation',
   ],
-  package_data={'STOFS3D_scripts': ['Datafiles/*']},
+  package_data={'STOFS3D_scripts': []},
   install_requires=[
     'numpy',
     'pandas',
     'xarray',
-    'climata==0.5.0',
-    'gsw==3.4.0',
-    'pyshp==2.1.3',
-    'noaa-coops==0.1.9'
   ],
 )

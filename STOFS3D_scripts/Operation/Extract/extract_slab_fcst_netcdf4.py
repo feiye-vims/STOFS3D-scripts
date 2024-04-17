@@ -1,10 +1,10 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import time 
 import argparse
+from dateutil import parser
 
 import numpy as np
-import numpy.ma as ma
 from netCDF4 import Dataset
 
 from generate_adcirc import split_quads  # modified by FY
@@ -80,13 +80,24 @@ if __name__ == '__main__':
     ds_v = Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")
     ds_s = Dataset(f"{fpath}/outputs/salinity_{sid}.nc")
     ds_t = Dataset(f"{fpath}/outputs/temperature_{sid}.nc")
-    #units=ds['time'].units
-    #base_date=ds['time'].base_date
+
+    base_date_str = ds_2d['time'].base_date.split()
+    base_datetime = datetime(int(base_date_str[0]), int(base_date_str[1]), int(base_date_str[2]), 0, 0, 0)
+    base_date_str = base_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    time_units_str = ds_2d['time'].units.split("since")[1]
+    time_units_datetime = parser.parse(time_units_str)
+    # check time zone is UTC
+    if time_units_datetime.tzinfo is None or time_units_datetime.tzinfo.utcoffset(time_units_datetime) != timedelta(0):
+        raise ValueError("Time zone is not UTC")
+
+    time_units_str = f"seconds since {time_units_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')}"
 
     #3. output directory
     outdir= './extract'
 
     #4. get kbp and sigma from vgrid.in
+    time_start = time()
     fid=open(f'{fpath}/vgrid.in','r')
     lines=fid.readlines()
     fid.close()
@@ -108,6 +119,7 @@ if __name__ == '__main__':
         sigma=np.array([line.split()[1:] for line in lines[1:]]).T.astype('float')
         fpm=sigma<-1
         sigma[fpm]=-1
+    print(f"read vgrid took {time()-time_start}")
 
     #print(np.unique(kbp))
 
@@ -187,8 +199,8 @@ if __name__ == '__main__':
         temp_bot[it, :]=temp_tmp[np.arange(NP), kbp]
         salt_bot[it, :]=salt_tmp[np.arange(NP), kbp]
 
-        uvel_bot[it, :]=uvel[np.arange(NP), kbp-1]
-        vvel_bot[it, :]=vvel[np.arange(NP), kbp-1]
+        uvel_bot[it, :]=uvel[np.arange(NP), kbp+1]
+        vvel_bot[it, :]=vvel[np.arange(NP), kbp+1]
 
         #tmp=np.array(salt[np.arange(NP),k1]*(1-coeff)+salt[np.arange(NP),k1+1]*coeff)
         #salt_inter[it, :]=np.squeeze(tmp)
@@ -241,8 +253,8 @@ if __name__ == '__main__':
         #variables
         fout.createVariable('time', 'f', ('time',))
         fout['time'].long_name="Time"
-        #fout['time'].units = units #f'seconds since {date.year}-{date.month}-{date.day} 00:00:00 UTC'
-        #fout['time'].base_date=base_date #(date.year, date.month, date.day, 0)
+        fout['time'].units = time_units_str #f'seconds since {date.year}-{date.month}-{date.day} 00:00:00 UTC'
+        fout['time'].base_date=base_date_str #(date.year, date.month, date.day, 0)
         fout['time'].standard_name="time"
         fout['time'][:] = times
 
